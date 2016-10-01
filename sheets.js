@@ -113,11 +113,11 @@ process.stdin.on('data', function (text) {
     if (cmds[0] === 'bal\n') {
         bal();
     }
-    if (cmds[0] === 'currm\n'){
+    if (cmds[0] === 'currentmonth\n'){
         var date = new Date();
-        console.log("Spent "+ calculateMonth(date.getMonth(), date.getFullYear() + " so far this month.");
+        calculateMonth(date.getMonth(), date.getFullYear());
     }
-    if(cmds[0] === 'lastm\n'){
+    if(cmds[0] === 'lastmonth\n'){
         var date = new Date();
         var newDate = date.getMonth()-1;
         var newYear = date.getFullYear();
@@ -125,15 +125,30 @@ process.stdin.on('data', function (text) {
             newDate = 12;
             newYear = newYear - 1;
         }
-        console.log("Spent " + calculateMonth(newDate, newYear)  +" last month");
+        calculateMonth(newDate, newYear);
     }
-    if(cmds[0] === 'exp'){
+    if(cmds[0] === 'expense'){
         beginRowCreation(exp, cmds);
     }
-    if(cmds[0] === 'inc'){
+    if(cmds[0] === 'income'){
         beginRowCreation(inc, cmds);
     }
 });
+
+var querySheet = function(range, funct){
+    var sheets = google.sheets('v4');
+    sheets.spreadsheets.values.get({
+        auth: authen,
+        spreadsheetId: '1xdiZGJQTVJc8HHUksSKkMTfvnBFNZXTftYMwkgc5kKk',
+        range: 'C5',
+    }, function(err, response){
+        if (err) {
+            console.log('The API returned an error: ' + err);
+            return;
+        }
+        funct(response);
+    });
+}
 
 var beginRowCreation = function(col, cmds){
     if(cmds[1] === undefined || cmds[2] === undefined){
@@ -149,64 +164,61 @@ var exp = ['F', 'H'];
 var inc = ['I', 'K'];
 
 var bal = function() {
-    var sheets = google.sheets('v4');
-    sheets.spreadsheets.values.get({
-        auth: authen,
-        spreadsheetId: '1xdiZGJQTVJc8HHUksSKkMTfvnBFNZXTftYMwkgc5kKk',
-        range: 'C5',
-    }, function(err, response) {
-        if (err) {
-            console.log('The API returned an error: ' + err);
-            return;
-        }
+    querySheet('C5', function(response){
         var rows = response.values;
         if (rows.length == 0) {
             console.log('Balance could not be found');
         } else {
-            console.log(rows[0][0]);
+            console.log("Balance: " + rows[0][0]);
         }
     });
 }
 
 var calculateMonth = function(month, year){
-    var sheets = google.sheets('v4');
-    sheets.spreadsheets.values.get({
-        auth: authen,
-        spreadsheetId: '1xdiZGJQTVJc8HHUksSKkMTfvnBFNZXTftYMwkgc5kKk',
-        range: 'F4:G',
-    }, function(err, response) {
-        if (err) {
-            console.log('The API has returned an error: ' + err);
-            return;
-        }
-        var rows = response.values;
-        if (rows.length == 0) {
-            console.log('Month total could not be calculated');
-        } else {
+        querySheet('F4:G', function(response) {
             var monthlyTot = 0;
-            for (var i = 0; i < rows.length; i++) {
-                var row = rows[i];
-                var celldate = row[0].split("/");
-                if(year === parseInt(celldate[2]) && month === parseInt(celldate[1])){
-                    monthlyTot = monthlyTot + row[1];
+            var rows = response.values;
+            if (rows.length == 0) {
+                console.log('Month total could not be calculated');
+            } else {
+                for (var i = 0; i < rows.length; i++) {
+                    var row = rows[i];
+                    var celldate = row[0].split("/");
+                    if(year === parseInt(celldate[2]) && month === parseInt(celldate[1])){
+                        monthlyTot = monthlyTot + row[1];
+                    }
+                }
+                console.log("Spent "+ monthlyTot + ".");
+            }
+        });
+}
+
+var getTransactions = function(number){
+    var transactions = [];
+    querySheet('F4:H', function(response){
+        querySheet('I4:K', function(response2){
+            var expRows = response.values;
+            var incRows = response2.values;
+            for(var i = expRows.length-1; i <= 0; i--{
+                for(var j = incRows.length-1; i <= 0; j--){
+                    var expDate = expRows[i][0].split("/");
+                    var incDate = incRows[j][0].split("/");
+
+                    for(int k = 3; k >= 0; k++){
+                        if(parseInt(expDate[k]) !== parseInt(expDate[k])){
+                            if(parseInt(expDate[k]) < parseInt(expDate[k])){
+                                transactions[]
+                            }
+                        }
+                    }
                 }
             }
-            return monthlyTot;
-        }
+        });
     });
 }
 
 var addNewRow = function(cols, date, amount, comment){
-    var sheets = google.sheets('v4');
-    sheets.spreadsheets.values.get({
-        auth: authen,
-        spreadsheetId: '1xdiZGJQTVJc8HHUksSKkMTfvnBFNZXTftYMwkgc5kKk',
-        range: 'F4:G',
-    }, function(err, response) {
-        if (err) {
-            console.log('The API returned an error: ' + err);
-            return;
-        }
+    querySheet('F4:G', function(response) {
         var rows = response.values;
         createRow(4 + rows.length, cols, date, amount, comment);
     });
