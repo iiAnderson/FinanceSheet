@@ -133,6 +133,14 @@ process.stdin.on('data', function (text) {
     if(cmds[0] === 'income'){
         beginRowCreation(inc, cmds);
     }
+    if(cmds[0] === 'trans'){
+        if(cmds[1] === undefined){
+            console.log("invalid parameters");
+            return;
+        } else {
+            getTransactions(parseInt(cmds[1]));
+        }
+    }
 });
 
 var querySheet = function(range, funct){
@@ -140,7 +148,7 @@ var querySheet = function(range, funct){
     sheets.spreadsheets.values.get({
         auth: authen,
         spreadsheetId: '1xdiZGJQTVJc8HHUksSKkMTfvnBFNZXTftYMwkgc5kKk',
-        range: 'C5',
+        range: range,
     }, function(err, response){
         if (err) {
             console.log('The API returned an error: ' + err);
@@ -199,20 +207,43 @@ var getTransactions = function(number){
         querySheet('I4:K', function(response2){
             var expRows = response.values;
             var incRows = response2.values;
-            for(var i = expRows.length-1; i <= 0; i--{
-                for(var j = incRows.length-1; i <= 0; j--){
-                    var expDate = expRows[i][0].split("/");
-                    var incDate = incRows[j][0].split("/");
-
-                    for(int k = 3; k >= 0; k++){
-                        if(parseInt(expDate[k]) !== parseInt(expDate[k])){
-                            if(parseInt(expDate[k]) < parseInt(expDate[k])){
-                                transactions[]
+            while(transactions.length != number){
+                    if(expRows === undefined && incRows.length !== 0){
+                        if(incRows.length < number){
+                            transactions = transactions.concat(incRows);
+                            console.log("Transactions: " + transactions);
+                            return
+                        } else {
+                            transactions = transactions.concat(incRows.reverse().splice(0, number));
+                            console.log("Transactions: " + transactions);
+                            return;
+                        }
+                    } else {
+                        if(incRows === undefined && expRows.length !== 0){
+                            if(expRows.length < number){
+                                transactions = transactions.concat(expRows);
+                                console.log("Transactions: " + transactions);
+                                return;
+                            } else {
+                                transactions = transactions.concat(expRows.reverse().splice(0, number));
+                                console.log("Transactions: " + transactions);
+                                return;
                             }
                         }
                     }
+                var expCell = parseDate(expRows[expRows.length-1][0]);
+                var incCell = parseDate(incRows[incRows.length-1][0]);
+                if(expCell.getTime() !== incCell.getTime()){
+                    if(expCell.getTime() > incCell.getTime()){
+                        transactions[transactions.length] = expRows.pop();
+                    } else {
+                        transactions[transactions.length] = incRows.pop();
+                    }
+                } else {
+                    transactions[transactions.length] = expRows.pop();
                 }
             }
+            console.log("Transactions: " + transactions);
         });
     });
 }
@@ -247,4 +278,10 @@ var createRow = function(row, cols, date, amount, comment){
         console.log("Successfully added");
 
     });
+}
+
+var parseDate = function(input) {
+    var parts = input.match(/(\d+)/g);
+    // new Date(year, month [, date [, hours[, minutes[, seconds[, ms]]]]])
+    return new Date(parts[0], parts[1]-1, parts[2]); // months are 0-based
 }
