@@ -147,7 +147,7 @@ var querySheet = function(range, funct){
     var sheets = google.sheets('v4');
     sheets.spreadsheets.values.get({
         auth: authen,
-        spreadsheetId: '1xdiZGJQTVJc8HHUksSKkMTfvnBFNZXTftYMwkgc5kKk',
+        spreadsheetId: spreadSheet,
         range: range,
     }, function(err, response){
         if (err) {
@@ -170,8 +170,9 @@ var beginRowCreation = function(col, cmds){
 
 var exp = ['F', 'H'];
 var inc = ['I', 'K'];
+var balance = 'C5';
 var dataSchema = ["Date", "Amount", "Comment"];
-var spreadSheet = "";
+var spreadSheet = "1xdiZGJQTVJc8HHUksSKkMTfvnBFNZXTftYMwkgc5kKk";
 
 function getDate(){
     return dataSchema.indexOf("Date");
@@ -186,7 +187,7 @@ function getComment(){
 }
 
 function bal() {
-    querySheet('C5', function(response){
+    querySheet(balance, function (response) {
         var rows = response.values;
         if (rows.length == 0) {
             console.log('Balance could not be found');
@@ -226,8 +227,8 @@ function addPrefix(arr, prefix){
 
 function getTransactions(number){
     var transactions = [];
-    querySheet('F4:H', function(response){
-        querySheet('I4:K', function(response2){
+    querySheet(exp[0] + '4:' + exp[1], function (response) {
+        querySheet(inc[0] + '4:' + inc[1], function (response2) {
             var expRows = response.values;
             var incRows = response2.values;
             addPrefix(expRows, "EXP");
@@ -236,23 +237,19 @@ function getTransactions(number){
                     if(expRows === undefined && incRows.length !== 0){
                         if(incRows.length < number){
                             transactions = transactions.concat(incRows);
-                            printTransactions(transactions);
-                            return
+                            return transactions;
                         } else {
                             transactions = transactions.concat(incRows.reverse().splice(0, number));
-                            printTransactions(transactions);
-                            return;
+                            return transactions;
                         }
                     } else {
                         if(incRows === undefined && expRows.length !== 0){
                             if(expRows.length < number){
                                 transactions = transactions.concat(expRows);
-                                printTransactions(transactions);
-                                return;
+                                return transactions;
                             } else {
                                 transactions = transactions.concat(expRows.reverse().splice(0, number));
-                                printTransactions(transactions);
-                                return;
+                                return transactions;
                             }
                         }
                     }
@@ -268,22 +265,27 @@ function getTransactions(number){
                     transactions[transactions.length] = expRows.pop();
                 }
             }
-            printTransactions(transactions);
+            return transactions;
         });
     });
 }
 
 function printTransactions(transactions){
+    var toPrint = [];
     console.log("---------- Transactions -----------");
     transactions.forEach(function(t){
-        console.log("[" + t[3] + "] " + t[getDate()] + " | £" + t[getAmount()] + " | " + t[getComment()]);
-    })
+        toPrint[toPrint.length] = "[" + t[3] + "] " + t[getDate()] + " | £" + t[getAmount()] + " | " + t[getComment()];
+    });
+    return toPrint;
 }
 
 function addNewRow(cols, dataSchema){
-    querySheet('F4:G', function(response) {
-        var rows = response.values;
-        createRow(4 + rows.length, cols, dataSchema);
+    querySheet(cols[0] + '4:' + cols[1], function (response) {
+        var rows = 0;
+        if (response.values !== undefined) {
+            rows = response.values.length;
+        }
+        createRow(4 + rows, cols, dataSchema);
     });
 }
 
@@ -299,7 +301,7 @@ function createRow(row, cols, dataSchema){
     sheets.spreadsheets.values.append({
         auth: authen,
         valueInputOption: "USER_ENTERED",
-        spreadsheetId: '1xdiZGJQTVJc8HHUksSKkMTfvnBFNZXTftYMwkgc5kKk',
+        spreadsheetId: spreadSheet,
         range: 'Sheet1!'+ cols[0] + row + ':' + cols[1]  + row,
         resource: body,
     }, function(err, response) {
@@ -315,5 +317,5 @@ function createRow(row, cols, dataSchema){
 function parseDate(input) {
     var parts = input.match(/(\d+)/g);
     // new Date(year, month [, date [, hours[, minutes[, seconds[, ms]]]]])
-    return new Date(parts[0], parts[1]-1, parts[2]); // months are 0-based
+    return new Date(parts[0], parts[1], parts[2]); // months are 0-based
 }
