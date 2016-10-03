@@ -164,14 +164,28 @@ var beginRowCreation = function(col, cmds){
         return;
     } else {
         var date = new Date();
-        addNewRow(col, date.getDate() + "/" + date.getMonth() + "/" + date.getFullYear(), cmds[1], cmds[2]);
+        addNewRow(col, [date.getDate() + "/" + date.getMonth() + "/" + date.getFullYear(), cmds[1], cmds[2]]);
     }
 }
 
 var exp = ['F', 'H'];
 var inc = ['I', 'K'];
+var dataSchema = ["Date", "Amount", "Comment"];
+var spreadSheet = "";
 
-var bal = function() {
+function getDate(){
+    return dataSchema.indexOf("Date");
+}
+
+function getAmount(){
+    return dataSchema.indexOf("Amount");
+}
+
+function getComment(){
+    return dataSchema.indexOf("Comment");
+}
+
+function bal() {
     querySheet('C5', function(response){
         var rows = response.values;
         if (rows.length == 0) {
@@ -201,32 +215,43 @@ var calculateMonth = function(month, year){
         });
 }
 
-var getTransactions = function(number){
+function addPrefix(arr, prefix){
+    if(arr === undefined){
+        return;
+    }
+    arr.forEach(function(fun){
+        fun[3] = prefix;
+    })
+}
+
+function getTransactions(number){
     var transactions = [];
     querySheet('F4:H', function(response){
         querySheet('I4:K', function(response2){
             var expRows = response.values;
             var incRows = response2.values;
+            addPrefix(expRows, "EXP");
+            addPrefix(incRows, "INC");
             while(transactions.length != number){
                     if(expRows === undefined && incRows.length !== 0){
                         if(incRows.length < number){
                             transactions = transactions.concat(incRows);
-                            console.log("Transactions: " + transactions);
+                            printTransactions(transactions);
                             return
                         } else {
                             transactions = transactions.concat(incRows.reverse().splice(0, number));
-                            console.log("Transactions: " + transactions);
+                            printTransactions(transactions);
                             return;
                         }
                     } else {
                         if(incRows === undefined && expRows.length !== 0){
                             if(expRows.length < number){
                                 transactions = transactions.concat(expRows);
-                                console.log("Transactions: " + transactions);
+                                printTransactions(transactions);
                                 return;
                             } else {
                                 transactions = transactions.concat(expRows.reverse().splice(0, number));
-                                console.log("Transactions: " + transactions);
+                                printTransactions(transactions);
                                 return;
                             }
                         }
@@ -243,24 +268,31 @@ var getTransactions = function(number){
                     transactions[transactions.length] = expRows.pop();
                 }
             }
-            console.log("Transactions: " + transactions);
+            printTransactions(transactions);
         });
     });
 }
 
-var addNewRow = function(cols, date, amount, comment){
+function printTransactions(transactions){
+    console.log("---------- Transactions -----------");
+    transactions.forEach(function(t){
+        console.log("[" + t[3] + "] " + t[getDate()] + " | £" + t[getAmount()] + " | " + t[getComment()]);
+    })
+}
+
+function addNewRow(cols, dataSchema){
     querySheet('F4:G', function(response) {
         var rows = response.values;
-        createRow(4 + rows.length, cols, date, amount, comment);
+        createRow(4 + rows.length, cols, dataSchema);
     });
 }
 
-var createRow = function(row, cols, date, amount, comment){
+function createRow(row, cols, dataSchema){
     console.log("row: " + row);
     var body = {
         majorDimension: "ROWS",
         "values": [
-            [date, amount, comment]
+            dataSchema
         ]
     }
     var sheets = google.sheets('v4');
@@ -280,7 +312,7 @@ var createRow = function(row, cols, date, amount, comment){
     });
 }
 
-var parseDate = function(input) {
+function parseDate(input) {
     var parts = input.match(/(\d+)/g);
     // new Date(year, month [, date [, hours[, minutes[, seconds[, ms]]]]])
     return new Date(parts[0], parts[1]-1, parts[2]); // months are 0-based
