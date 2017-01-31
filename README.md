@@ -1,5 +1,7 @@
 # Finance Sheet
 
+Written 2016
+
 An example of using the Google OAuth System to create a simple application that
 uses the Google Sheets API to store financial data and pull of the spreadsheet 
 when needed.
